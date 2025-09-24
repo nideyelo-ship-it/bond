@@ -1,0 +1,124 @@
+# main.py
+# Main entry point for the Task Management System
+# Integrates all modules and provides a CLI interface
+
+from user import UserManager
+from task import TaskManager
+from reminder import Reminder
+from report import ReportGenerator
+from logger import Logger
+from history import TaskHistory
+from export_import import ExportImportManager
+from search import SearchManager
+from init_data import initialize_sample_data
+from getpass import getpass
+
+def main():
+    """Main function to run the Task Management System."""
+    user_manager = UserManager()
+    task_manager = TaskManager(user_manager)
+    reminder = Reminder(task_manager)
+    report_generator = ReportGenerator(task_manager)
+    logger = Logger()
+    history = TaskHistory()
+    export_import = ExportImportManager(task_manager)
+    search = SearchManager(task_manager)
+
+    # Initialize sample data for testing
+    initialize_sample_data(user_manager, task_manager)
+
+    while True:
+        print("\nTask Management System")
+        print("1. Register")
+        print("2. Login")
+        print("3. Add Task")
+        print("4. List Tasks")
+        print("5. Complete Task")
+        print("6. Batch Complete Tasks")
+        print("7. Add Tag to Task")
+        print("8. Remove Tag from Task")
+        print("9. View Reminders")
+        print("10. View Report")
+        print("11. View Task History")
+        print("12. Export Tasks to CSV")
+        print("13. Import Tasks from CSV")
+        print("14. Search Tasks")
+        print("15. Exit")
+        choice = input("Enter your choice (1-15): ")
+
+        if choice == "1":
+            username = input("Enter username: ")
+            password = getpass("Enter password: ")
+            role = input("Enter role (user/admin): ").lower()
+            if user_manager.register(username, password, role):
+                logger.log_user_action(username, "Registered")
+
+        elif choice == "2":
+            username = input("Enter username: ")
+            password = getpass("Enter password: ")
+            if user_manager.login(username, password):
+                logger.log_user_action(username, "Logged in")
+
+        elif choice == "3":
+            title = input("Enter task title: ")
+            description = input("Enter task description: ")
+            due_date = input("Enter due date (YYYY-MM-DD): ")
+            priority = input("Enter priority (Low/Medium/High): ")
+            category = input("Enter category: ")
+            tags = input("Enter tags (comma-separated): ").split(",")
+            tags = [tag.strip() for tag in tags if tag.strip()]
+            if task_manager.add_task(title, description, due_date, priority, category, tags):
+                logger.log_user_action(user_manager.get_current_user().username, f"Added task '{title}'")
+                history.add_entry(task_manager.get_current_user().tasks[-1].id, "created", f"Task '{title}' created")
+
+        elif choice == "4":
+            all_users = user_manager.get_current_user().can_view_all_tasks() if user_manager.get_current_user() else False
+            if all_users:
+                all_users = input("View all users' tasks? (y/n): ").lower() == "y"
+            filter_by = input("Filter by (category/priority/tag/none): ").lower()
+            value = None
+            if filter_by in ["category", "priority", "tag"]:
+                value = input(f"Enter {filter_by} value: ")
+            task_manager.list_tasks(filter_by if filter_by != "none" else None, value, all_users)
+            logger.log_user_action(user_manager.get_current_user().username, "Listed tasks")
+
+        elif choice == "5":
+            task_id = input("Enter task ID to complete: ")
+            if task_manager.complete_task(task_id):
+                logger.log_user_action(user_manager.get_current_user().username, f"Completed task ID {task_id}")
+                history.add_entry(task_id, "completed", f"Task ID {task_id} marked as completed")
+
+        elif choice == "6":
+            task_ids = input("Enter task IDs to complete (comma-separated): ").split(",")
+            task_ids = [tid.strip() for tid in task_ids if tid.strip()]
+            count = task_manager.batch_complete_tasks(task_ids)
+            if count > 0:
+                logger.log_user_action(user_manager.get_current_user().username, f"Batch completed {count} tasks")
+                for tid in task_ids:
+                    history.add_entry(tid, "completed", f"Task ID {tid} marked as completed in batch")
+
+        elif choice == "7":
+            task_id = input("Enter task ID: ")
+            tag = input("Enter tag to add: ")
+            if task_manager.add_tag_to_task(task_id, tag):
+                logger.log_user_action(user_manager.get_current_user().username, f"Added tag '{tag}' to task ID {task_id}")
+                history.add_entry(task_id, "tag_added", f"Tag '{tag}' added")
+
+        elif choice == "8":
+            task_id = input("Enter task ID: ")
+            tag = input("Enter tag to remove: ")
+            if task_manager.remove_tag_from_task(task_id, tag):
+                logger.log_user_action(user_manager.get_current_user().username, f"Removed tag '{tag}' from task ID {task_id}")
+                history.add_entry(task_id, "tag_removed", f"Tag '{tag}' removed")
+
+        elif choice == "9":
+            reminder_days = input("Enter reminder interval in days (default 1): ")
+            if reminder_days.isdigit():
+                reminder.set_reminder_days(int(reminder_days))
+            reminder.display_reminders()
+            logger.log_user_action(user_manager.get_current_user().username, "Viewed reminders")
+
+        elif choice == "10":
+            all_users = user_manager.get_current_user().can_view_all_tasks() if user_manager.get_current_user() else False
+            if all_users:
+                all_users = input("View report...
