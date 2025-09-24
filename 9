@@ -1,0 +1,70 @@
+# export_import.py
+# Module for exporting and importing tasks to/from CSV or JSON files
+# Supports data backup and restoration
+
+import csv
+import json
+from typing import List
+from task import Task, TaskManager
+from user import UserManager
+
+class ExportImportManager:
+    """Class for exporting and importing tasks to/from files."""
+    def __init__(self, task_manager: TaskManager):
+        self.task_manager = task_manager
+
+    def export_to_csv(self, filename: str, all_users: bool = False) -> bool:
+        """Export tasks to a CSV file."""
+        user = self.task_manager.user_manager.get_current_user()
+        if not user:
+            print("Please log in first!")
+            return False
+        tasks = []
+        if all_users and user.can_view_all_tasks():
+            for u in self.task_manager.user_manager.get_all_users().values():
+                tasks.extend(u.tasks)
+        else:
+            tasks = user.tasks
+        try:
+            with open(filename, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(["ID", "Title", "Description", "Due Date", "Priority", "Category", "Tags", "Status"])
+                for task in tasks:
+                    writer.writerow([
+                        task.id,
+                        task.title,
+                        task.description,
+                        task.due_date,
+                        task.priority,
+                        task.category,
+                        ",".join(task.tags),
+                        "Completed" if task.completed else "Pending"
+                    ])
+            print(f"Tasks exported to {filename} successfully!")
+            return True
+        except Exception as e:
+            print(f"Error exporting tasks: {e}")
+            return False
+
+    def import_from_csv(self, filename: str) -> bool:
+        """Import tasks from a CSV file."""
+        user = self.task_manager.user_manager.get_current_user()
+        if not user:
+            print("Please log in first!")
+            return False
+        try:
+            with open(filename, 'r') as f:
+                reader = csv.reader(f)
+                next(reader)  # Skip header
+                for row in reader:
+                    if len(row) >= 7:  # Ensure row has enough columns
+                        task = Task(row[1], row[2], row[3], row[4], row[5], tags=row[6].split(",") if row[6] else [])
+                        task.id = row[0]
+                        task.completed = row[7] == "Completed"
+                        user.tasks.append(task)
+            self.task_manager.user_manager.save_users()
+            print(f"Tasks imported from {filename} successfully!")
+            return True
+        except Exception as e:
+            print(f"Error importing tasks: {e}")
+            return False
