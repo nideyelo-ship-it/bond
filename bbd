@@ -1,0 +1,175 @@
+# Task Management System
+# A simple CLI-based task management application with user authentication,
+# task creation, and basic reporting.
+
+import json
+import os
+from datetime import datetime
+import uuid
+import getpass
+
+class User:
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
+        self.tasks = []
+
+    def to_dict(self):
+        return {
+            "username": self.username,
+            "password": self.password,
+            "tasks": [task.to_dict() for task in self.tasks]
+        }
+
+class Task:
+    def __init__(self, title, description, due_date, priority):
+        self.id = str(uuid.uuid4())
+        self.title = title
+        self.description = description
+        self.due_date = due_date
+        self.priority = priority
+        self.created_at = datetime.now()
+        self.completed = False
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "due_date": self.due_date,
+            "priority": self.priority,
+            "created_at": self.created_at.isoformat(),
+            "completed": self.completed
+        }
+
+class TaskManager:
+    def __init__(self, data_file="tasks.json"):
+        self.data_file = data_file
+        self.users = {}
+        self.current_user = None
+        self.load_data()
+
+    def load_data(self):
+        if os.path.exists(self.data_file):
+            with open(self.data_file, 'r') as f:
+                data = json.load(f)
+                for user_data in data:
+                    user = User(user_data["username"], user_data["password"])
+                    for task_data in user_data["tasks"]:
+                        task = Task(
+                            task_data["title"],
+                            task_data["description"],
+                            task_data["due_date"],
+                            task_data["priority"]
+                        )
+                        task.id = task_data["id"]
+                        task.created_at = datetime.fromisoformat(task_data["created_at"])
+                        task.completed = task_data["completed"]
+                        user.tasks.append(task)
+                    self.users[user.username] = user
+
+    def save_data(self):
+        data = [user.to_dict() for user in self.users.values()]
+        with open(self.data_file, 'w') as f:
+            json.dump(data, f, indent=4)
+
+    def register(self, username, password):
+        if username in self.users:
+            print("Username already exists!")
+            return False
+        self.users[username] = User(username, password)
+        self.save_data()
+        print("Registration successful!")
+        return True
+
+    def login(self, username, password):
+        if username in self.users and self.users[username].password == password:
+            self.current_user = self.users[username]
+            print(f"Welcome, {username}!")
+            return True
+        print("Invalid username or password!")
+        return False
+
+    def add_task(self, title, description, due_date, priority):
+        if not self.current_user:
+            print("Please log in first!")
+            return
+        task = Task(title, description, due_date, priority)
+        self.current_user.tasks.append(task)
+        self.save_data()
+        print(f"Task '{title}' added successfully!")
+
+    def list_tasks(self):
+        if not self.current_user:
+            print("Please log in first!")
+            return
+        if not self.current_user.tasks:
+            print("No tasks found!")
+            return
+        for task in self.current_user.tasks:
+            status = "Completed" if task.completed else "Pending"
+            print(f"ID: {task.id}")
+            print(f"Title: {task.title}")
+            print(f"Description: {task.description}")
+            print(f"Due Date: {task.due_date}")
+            print(f"Priority: {task.priority}")
+            print(f"Status: {status}")
+            print("-" * 40)
+
+    def complete_task(self, task_id):
+        if not self.current_user:
+            print("Please log in first!")
+            return
+        for task in self.current_user.tasks:
+            if task.id == task_id:
+                task.completed = True
+                self.save_data()
+                print(f"Task '{task.title}' marked as completed!")
+                return
+        print("Task not found!")
+
+def main():
+    manager = TaskManager()
+    while True:
+        print("\nTask Management System")
+        print("1. Register")
+        print("2. Login")
+        print("3. Add Task")
+        print("4. List Tasks")
+        print("5. Complete Task")
+        print("6. Exit")
+        choice = input("Enter your choice (1-6): ")
+
+        if choice == "1":
+            username = input("Enter username: ")
+            password = getpass.getpass("Enter password: ")
+            manager.register(username, password)
+
+        elif choice == "2":
+            username = input("Enter username: ")
+            password = getpass.getpass("Enter password: ")
+            manager.login(username, password)
+
+        elif choice == "3":
+            title = input("Enter task title: ")
+            description = input("Enter task description: ")
+            due_date = input("Enter due date (YYYY-MM-DD): ")
+            priority = input("Enter priority (Low/Medium/High): ")
+            manager.add_task(title, description, due_date, priority)
+
+        elif choice == "4":
+            manager.list_tasks()
+
+        elif choice == "5":
+            task_id = input("Enter task ID to complete: ")
+            manager.complete_task(task_id)
+
+        elif choice == "6":
+            print("Goodbye!")
+            break
+
+        else:
+            print("Invalid choice! Please try again.")
+
+if __name__ == "__main__":
+    main()
