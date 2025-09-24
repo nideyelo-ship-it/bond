@@ -1,0 +1,148 @@
+# task.py
+# Module for managing tasks, including creation, updates, categorization, tags, and batch operations
+# Supports task creation, completion, and filtering by category, priority, or tags
+
+from datetime import datetime
+import uuid
+from typing import Dict, List
+from user import UserManager
+
+class Task:
+    """Class representing a task with attributes like title, due date, priority, category, and tags."""
+    def __init__(self, title: str, description: str, due_date: str, priority: str, category: str = "General", tags: List[str] = None):
+        self.id = str(uuid.uuid4())
+        self.title = title
+        self.description = description
+        self.due_date = due_date
+        self.priority = priority  # Low, Medium, High
+        self.category = category
+        self.tags = tags if tags else []
+        self.created_at = datetime.now()
+        self.completed = False
+        self.completed_at = None
+
+    def to_dict(self) -> Dict:
+        """Convert task object to dictionary for JSON serialization."""
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "due_date": self.due_date,
+            "priority": self.priority,
+            "category": self.category,
+            "tags": self.tags,
+            "created_at": self.created_at.isoformat(),
+            "completed": self.completed,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None
+        }
+
+    def mark_completed(self) -> None:
+        """Mark the task as completed and set completion time."""
+        self.completed = True
+        self.completed_at = datetime.now()
+
+    def add_tag(self, tag: str) -> None:
+        """Add a tag to the task if it doesn't already exist."""
+        if tag not in self.tags:
+            self.tags.append(tag)
+
+    def remove_tag(self, tag: str) -> None:
+        """Remove a tag from the task if it exists."""
+        if tag in self.tags:
+            self.tags.remove(tag)
+
+class TaskManager:
+    """Class for managing tasks for a user, including batch operations."""
+    def __init__(self, user_manager: UserManager):
+        self.user_manager = user_manager
+
+    def add_task(self, title: str, description: str, due_date: str, priority: str, category: str, tags: List[str] = None) -> bool:
+        """Add a task for the current user with optional tags."""
+        user = self.user_manager.get_current_user()
+        if not user:
+            print("Please log in first!")
+            return False
+        task = Task(title, description, due_date, priority, category, tags)
+        user.add_task(task)
+        self.user_manager.save_users()
+        print(f"Task '{title}' added successfully!")
+        return True
+
+    def list_tasks(self, filter_by: str = None, value: str = None, all_users: bool = False) -> None:
+        """List tasks, optionally filtered by category, priority, or tag; supports admin viewing all users' tasks."""
+        user = self.user_manager.get_current_user()
+        if not user:
+            print("Please log in first!")
+            return
+        tasks = []
+        if all_users and user.can_view_all_tasks():
+            for u in self.user_manager.get_all_users().values():
+                tasks.extend(u.tasks)
+        else:
+            tasks = user.tasks
+        if not tasks:
+            print("No tasks found!")
+            return
+        if filter_by == "category":
+            tasks = [task for task in tasks if task.category == value]
+        elif filter_by == "priority":
+            tasks = [task for task in tasks if task.priority == value]
+        elif filter_by == "tag":
+            tasks = [task for task in tasks if value in task.tags]
+        for task in tasks:
+            status = "Completed" if task.completed else "Pending"
+            print(f"ID: {task.id}")
+            print(f"Title: {task.title}")
+            print(f"Description: {task.description}")
+            print(f"Due Date: {task.due_date}")
+            print(f"Priority: {task.priority}")
+            print(f"Category: {task.category}")
+            print(f"Tags: {', '.join(task.tags)}")
+            print(f"Status: {status}")
+            print("-" * 50)
+
+    def complete_task(self, task_id: str) -> bool:
+        """Mark a task as completed by ID."""
+        user = self.user_manager.get_current_user()
+        if not user:
+            print("Please log in first!")
+            return False
+        for task in user.tasks:
+            if task.id == task_id:
+                task.mark_completed()
+                self.user_manager.save_users()
+                print(f"Task '{task.title}' marked as completed!")
+                return True
+        print("Task not found!")
+        return False
+
+    def batch_complete_tasks(self, task_ids: List[str]) -> int:
+        """Mark multiple tasks as completed by their IDs."""
+        user = self.user_manager.get_current_user()
+        if not user:
+            print("Please log in first!")
+            return 0
+        count = 0
+        for task_id in task_ids:
+            for task in user.tasks:
+                if task.id == task_id:
+                    task.mark_completed()
+                    count += 1
+        if count > 0:
+            self.user_manager.save_users()
+            print(f"{count} tasks marked as completed!")
+        else:
+            print("No tasks found for the provided IDs!")
+        return count
+
+    def add_tag_to_task(self, task_id: str, tag: str) -> bool:
+        """Add a tag to a specific task."""
+        user = self.user_manager.get_current_user()
+        if not user:
+            print("Please log in first!")
+            return False
+        for task in user.tasks:
+            if task.id == task_id:
+                task.add_tag(tag)
+                self.user_manager.save_users()
+               
