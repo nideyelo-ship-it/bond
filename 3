@@ -1,0 +1,83 @@
+# user.py
+# Module for managing user accounts, roles, authentication, and permissions
+# Provides functionality for user registration, login, and role-based access control
+
+import json
+import os
+from typing import List, Dict
+from getpass import getpass
+import hashlib
+from task import Task
+
+class User:
+    """Class representing a user with username, password, role, and tasks."""
+    def __init__(self, username: str, password: str, role: str = "user"):
+        self.username = username
+        self.password = self._hash_password(password)
+        self.role = role  # Either 'user' or 'admin'
+        self.tasks = []
+
+    def _hash_password(self, password: str) -> str:
+        """Hash the password using SHA-256 for secure storage."""
+        return hashlib.sha256(password.encode()).hexdigest()
+
+    def check_password(self, password: str) -> bool:
+        """Verify if the provided password matches the stored hash."""
+        return self._hash_password(password) == self.password
+
+    def to_dict(self) -> Dict:
+        """Convert user object to dictionary for JSON serialization."""
+        return {
+            "username": self.username,
+            "password": self.password,
+            "role": self.role,
+            "tasks": [task.to_dict() for task in self.tasks]
+        }
+
+    def add_task(self, task: Task) -> None:
+        """Add a task to the user's task list."""
+        self.tasks.append(task)
+
+    def can_view_all_tasks(self) -> bool:
+        """Check if the user has admin privileges to view all tasks."""
+        return self.role == "admin"
+
+class UserManager:
+    """Class for managing user registration, login, and data persistence."""
+    def __init__(self, data_file: str = "users.json"):
+        self.data_file = data_file
+        self.users = {}
+        self.current_user = None
+        self.load_users()
+
+    def load_users(self) -> None:
+        """Load user data from JSON file, handling potential errors."""
+        if os.path.exists(self.data_file):
+            try:
+                with open(self.data_file, 'r') as f:
+                    data = json.load(f)
+                    for user_data in data:
+                        user = User(user_data["username"], "", user_data["role"])
+                        user.password = user_data["password"]  # Set hashed password directly
+                        self.users[user.username] = user
+            except Exception as e:
+                print(f"Error loading users: {e}")
+
+    def save_users(self) -> None:
+        """Save user data to JSON file, ensuring data persistence."""
+        try:
+            data = [user.to_dict() for user in self.users.values()]
+            with open(self.data_file, 'w') as f:
+                json.dump(data, f, indent=4)
+        except Exception as e:
+            print(f"Error saving users: {e}")
+
+    def register(self, username: str, password: str, role: str = "user") -> bool:
+        """Register a new user with a username, password, and role."""
+        if username in self.users:
+            print("Username already exists!")
+            return False
+        if role not in ["user", "admin"]:
+            print("Invalid role! Use 'user' or 'admin'.")
+            return False
+        self.users[username] = User
