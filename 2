@@ -1,0 +1,29 @@
+# task.py
+# Module for managing tasks, including creation, updates, and categorization
+
+from datetime import datetime
+import uuid
+from typing import Dict
+
+class Task:
+    """Class representing a task with attributes like title, due date, etc."""
+    def __init__(self, title: str, description: str, due_date: str, priority: str, category: str = "General"):
+        self.id = str(uuid.uuid4())
+        self.title = title
+        self.description = description
+        self.due_date = due_date
+        self.priority = priority  # Low, Medium, High
+        self.category = category
+        self.created_at = datetime.now()
+        self.completed = False
+        self.completed_at = None
+
+    def to_dict(self) -> Dict:
+        """Convert task object to dictionary for JSON serialization."""
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "due_date": self.due_date,
+            "priority": self.priority,
+            "category": self
