@@ -1,0 +1,36 @@
+# logger.py
+# Module for logging user actions and system events
+# Supports multiple log levels and detailed logging
+
+import logging
+from datetime import datetime
+
+class Logger:
+    """Class for logging system events to a file with different log levels."""
+    def __init__(self, log_file: str = "task_manager.log"):
+        self.log_file = log_file
+        logging.basicConfig(
+            filename=log_file,
+            level=logging.DEBUG,
+            format="%(asctime)s - %(levelname)s - %(message)s"
+        )
+
+    def log_debug(self, message: str) -> None:
+        """Log a debug-level message."""
+        logging.debug(message)
+
+    def log_info(self, message: str) -> None:
+        """Log an info-level message."""
+        logging.info(message)
+
+    def log_warning(self, message: str) -> None:
+        """Log a warning-level message."""
+        logging.warning(message)
+
+    def log_error(self, message: str) -> None:
+        """Log an error-level message."""
+        logging.error(message)
+
+    def log_user_action(self, username: str, action: str) -> None:
+        """Log a user action with timestamp and username."""
+        self.log_info(f"User '{username}' performed action: {action}")
