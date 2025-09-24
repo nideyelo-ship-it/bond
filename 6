@@ -1,0 +1,80 @@
+# report.py
+# Module for generating task reports and statistics
+# Includes completion rates, priority distribution, and category distribution
+
+from typing import Dict
+from task import Task, TaskManager
+from user import UserManager
+
+class ReportGenerator:
+    """Class for generating task reports and statistics."""
+    def __init__(self, task_manager: TaskManager):
+        self.task_manager = task_manager
+
+    def completion_rate(self, all_users: bool = False) -> float:
+        """Calculate the task completion rate for the current user or all users (admin only)."""
+        user = self.task_manager.user_manager.get_current_user()
+        if not user:
+            print("Please log in first!")
+            return 0.0
+        tasks = []
+        if all_users and user.can_view_all_tasks():
+            for u in self.task_manager.user_manager.get_all_users().values():
+                tasks.extend(u.tasks)
+        else:
+            tasks = user.tasks
+        if not tasks:
+            print("No tasks to report!")
+            return 0.0
+        completed = sum(1 for task in tasks if task.completed)
+        total = len(tasks)
+        return (completed / total * 100) if total > 0 else 0.0
+
+    def priority_distribution(self, all_users: bool = False) -> Dict[str, int]:
+        """Calculate the distribution of tasks by priority."""
+        user = self.task_manager.user_manager.get_current_user()
+        if not user:
+            print("Please log in first!")
+            return {}
+        tasks = []
+        if all_users and user.can_view_all_tasks():
+            for u in self.task_manager.user_manager.get_all_users().values():
+                tasks.extend(u.tasks)
+        else:
+            tasks = user.tasks
+        distribution = {"Low": 0, "Medium": 0, "High": 0}
+        for task in tasks:
+            if task.priority in distribution:
+                distribution[task.priority] += 1
+        return distribution
+
+    def category_distribution(self, all_users: bool = False) -> Dict[str, int]:
+        """Calculate the distribution of tasks by category."""
+        user = self.task_manager.user_manager.get_current_user()
+        if not user:
+            print("Please log in first!")
+            return {}
+        tasks = []
+        if all_users and user.can_view_all_tasks():
+            for u in self.task_manager.user_manager.get_all_users().values():
+                tasks.extend(u.tasks)
+        else:
+            tasks = user.tasks
+        distribution = {}
+        for task in tasks:
+            distribution[task.category] = distribution.get(task.category, 0) + 1
+        return distribution
+
+    def display_report(self, all_users: bool = False) -> None:
+        """Display a comprehensive report with completion rate and distributions."""
+        print("\nTask Report")
+        print("-" * 50)
+        scope = "All Users" if all_users else "Current User"
+        print(f"Scope: {scope}")
+        print(f"Completion Rate: {self.completion_rate(all_users):.2f}%")
+        print("\nPriority Distribution:")
+        for priority, count in self.priority_distribution(all_users).items():
+            print(f"{priority}: {count} tasks")
+        print("\nCategory Distribution:")
+        for category, count in self.category_distribution(all_users).items():
+            print(f"{category}: {count} tasks")
