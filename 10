@@ -1,0 +1,61 @@
+# init_data.py
+# Module for initializing sample users and tasks
+# Used to populate the system with test data
+
+from user import UserManager
+from task import TaskManager
+
+def initialize_sample_data(user_manager: UserManager, task_manager: TaskManager) -> None:
+    """Initialize sample users and tasks for testing."""
+    # Sample users
+    user_manager.register("alice", "password123", "admin")
+    user_manager.register("bob", "password456", "user")
+    user_manager.register("charlie", "password789", "user")
+
+    # Log in as each user to add tasks
+    user_manager.login("alice", "password123")
+    task_manager.add_task(
+        title="Prepare presentation",
+        description="Create slides for team meeting",
+        due_date="2025-09-30",
+        priority="High",
+        category="Work",
+        tags=["urgent", "meeting"]
+    )
+    task_manager.add_task(
+        title="Review budget",
+        description="Analyze Q3 financials",
+        due_date="2025-10-05",
+        priority="Medium",
+        category="Work",
+        tags=["finance"]
+    )
+
+    user_manager.login("bob", "password456")
+    task_manager.add_task(
+        title="Grocery shopping",
+        description="Buy groceries for the week",
+        due_date="2025-09-26",
+        priority="Low",
+        category="Personal",
+        tags=["shopping"]
+    )
+    task_manager.add_task(
+        title="Finish project",
+        description="Complete coding assignment",
+        due_date="2025-09-28",
+        priority="High",
+        category="Work",
+        tags=["coding", "urgent"]
+    )
+
+    user_manager.login("charlie", "password789")
+    task_manager.add_task(
+        title="Plan vacation",
+        description="Research destinations for summer",
+        due_date="2025-10-15",
+        priority="Medium",
+        category="Personal",
+        tags=["travel"]
+    )
+    print("Sample data initialized successfully!")
